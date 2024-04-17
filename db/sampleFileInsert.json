@@ -1,0 +1,11 @@
+{
+	"op": "i",
+	"ns": "test.student",
+	"o": {
+	  "_id": "635b79e231d82a8ab1de863b",
+	  "name": "Selena Miller",
+	  "roll_no": 51,
+	  "is_graduated": false,
+	  "date_of_birth": "2000-01-30"
+	}
+  }
