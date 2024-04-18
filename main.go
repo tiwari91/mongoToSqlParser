@@ -19,13 +19,15 @@ func main() {
 	oplogJSON := string(oplogBytes)
 	//fmt.Println("The File is opened successfully...", oplogJSON)
 
-	sqlStatement, err := sqlconverter.ConvertToSQLInsert(oplogJSON)
+	createSchemaSQL, createTableSQL, insertSQL, err := sqlconverter.ConvertToSQLInsert(oplogJSON)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 
-	fmt.Println("SQL Statement:", sqlStatement)
+	fmt.Println("SQL createSchemaSQL:", createSchemaSQL)
+	fmt.Println("\nSQL createTableSQL:", createTableSQL)
+	fmt.Println("\nSQL Statement Insert:", insertSQL)
 
 	fmt.Println("\n-------Update-------")
 
@@ -38,13 +40,13 @@ func main() {
 
 	oplogJSON = string(oplogBytes)
 
-	sqlStatement, err = sqlconverter.ConvertToSQLUpdate([]byte(oplogJSON))
+	sqlStatement, err := sqlconverter.ConvertToSQLUpdate([]byte(oplogJSON))
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 
-	fmt.Println("SQL Statement:", sqlStatement)
+	fmt.Println("\nSQL Statement update:", sqlStatement)
 
 	fmt.Println("\n-------Delete-------")
 
@@ -62,6 +64,6 @@ func main() {
 		return
 	}
 
-	fmt.Println("SQL Statement:", sqlStatement)
+	fmt.Println("SQL Statement Delete:", sqlStatement)
 
 }
