@@ -19,15 +19,12 @@ func main() {
 	oplogJSON := string(oplogBytes)
 	//fmt.Println("The File is opened successfully...", oplogJSON)
 
-	createSchemaSQL, createTableSQL, insertSQL, err := sqlconverter.ConvertToSQLInsert(oplogJSON)
+	sqlStatements, err := sqlconverter.ConvertToSQLInsert(oplogJSON)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
-
-	fmt.Println("SQL createSchemaSQL:", createSchemaSQL)
-	fmt.Println("\nSQL createTableSQL:", createTableSQL)
-	fmt.Println("\nSQL Statement Insert:", insertSQL)
+	fmt.Println("\nSQL Statement Insert:", sqlStatements)
 
 	fmt.Println("\n-------Update-------")
 
