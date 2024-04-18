@@ -7,6 +7,8 @@ import (
 )
 
 func main() {
+
+	fmt.Println("\n-------Insert-------")
 	//insert
 	oplogBytes, err := os.ReadFile("db/sampleFileInsert.json")
 	if err != nil {
@@ -25,6 +27,8 @@ func main() {
 
 	fmt.Println("SQL Statement:", sqlStatement)
 
+	fmt.Println("\n-------Update-------")
+
 	// update
 	oplogBytes, err = os.ReadFile("db/sampleFileUpdate.json")
 	if err != nil {
@@ -35,6 +39,24 @@ func main() {
 	oplogJSON = string(oplogBytes)
 
 	sqlStatement, err = sqlconverter.ConvertToSQLUpdate([]byte(oplogJSON))
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Println("SQL Statement:", sqlStatement)
+
+	fmt.Println("\n-------Delete-------")
+
+	oplogBytes, err = os.ReadFile("db/sampleFileDelete.json")
+	if err != nil {
+		fmt.Println("Error reading oplog file:", err)
+		return
+	}
+
+	oplogJSON = string(oplogBytes)
+
+	sqlStatement, err = sqlconverter.ConvertToSQLDelete(oplogJSON)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
