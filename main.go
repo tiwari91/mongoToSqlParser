@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"mongotosqlparser/sqlconverter"
 	"os"
@@ -8,9 +9,19 @@ import (
 
 func main() {
 
-	fmt.Println("\n-------Insert-------")
+	inputFilename := flag.String("input", "", "Input filename containing oplogs")
+	outputFilename := flag.String("output", "", "Output filename to write SQL statements")
+	flag.Parse()
 
-	oplogBytes, err := os.ReadFile("db/Input.json")
+	// Check if input filename is provided
+	if *inputFilename == "" {
+		fmt.Println("Error: Input filename not provided")
+		return
+	}
+
+	//fmt.Println("\n-------Insert-------")
+
+	oplogBytes, err := os.ReadFile(*inputFilename)
 	if err != nil {
 		fmt.Println("Error reading oplog file:", err)
 		return
@@ -27,7 +38,7 @@ func main() {
 
 	//fmt.Println("\n\n\nSQL Statement Insert:", sqlStatements)
 
-	err = os.WriteFile("output.sql", []byte(sqlStatements), 0644)
+	err = os.WriteFile(*outputFilename, []byte(sqlStatements), 0644)
 	if err != nil {
 		fmt.Println("Error writing SQL statements to file:", err)
 		return
@@ -36,7 +47,7 @@ func main() {
 
 	// fmt.Println("\n-------Update-------")
 
-	oplogBytes, err = os.ReadFile("db/Input.json")
+	oplogBytes, err = os.ReadFile(*inputFilename)
 	if err != nil {
 		fmt.Println("Error reading oplog file:", err)
 		return
@@ -51,7 +62,7 @@ func main() {
 	}
 
 	//fmt.Println("\nSQL Statement update:", sqlStatement)
-	file, err := os.OpenFile("output.sql", os.O_APPEND|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(*outputFilename, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Println("Error opening output.sql file:", err)
 		return
@@ -67,7 +78,7 @@ func main() {
 
 	// fmt.Println("\n-------Delete-------")
 
-	oplogBytes, err = os.ReadFile("db/Input.json")
+	oplogBytes, err = os.ReadFile(*inputFilename)
 	if err != nil {
 		fmt.Println("Error reading oplog file:", err)
 		return
@@ -82,7 +93,7 @@ func main() {
 	}
 
 	//fmt.Println("\nSQL Statement update:", sqlStatement)
-	file, err = os.OpenFile("output.sql", os.O_APPEND|os.O_WRONLY, 0644)
+	file, err = os.OpenFile(*outputFilename, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Println("Error opening output.sql file:", err)
 		return
