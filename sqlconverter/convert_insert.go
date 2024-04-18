@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 type OplogInsert struct {
@@ -36,6 +38,7 @@ func ConvertToSQLInsert(oplogJSON string) (string, error) {
 		var columnNames []string
 		for key, value := range data {
 			columnNames = append(columnNames, key)
+			//fmt.Println("columnNames:", columnNames)
 			switch v := value.(type) {
 			case string:
 				jsonValues = append(jsonValues, fmt.Sprintf("'%s'", v))
@@ -46,6 +49,33 @@ func ConvertToSQLInsert(oplogJSON string) (string, error) {
 			case bool:
 				jsonValues = append(jsonValues, fmt.Sprintf("%t", v))
 				columnDefinitions = append(columnDefinitions, fmt.Sprintf("%s BOOLEAN", key))
+			case []interface{}:
+				// Handle arrays
+				for _, item := range v {
+					itemMap, ok := item.(map[string]interface{})
+					if !ok {
+						return "", fmt.Errorf("unable to parse array item for column %s", key)
+					}
+					//fmt.Println("itemMap:", itemMap)
+
+					// Create a table for the array if not already created
+					createArrayTable(oplog.Ns, key, itemMap, &createdTables, &sqlStatements)
+
+					studentID := getStudentId(data)
+					// Check if student ID is empty
+					if studentID == "" {
+						return "", fmt.Errorf("student ID not found in oplog data")
+					}
+
+					// Insert records into the array table
+					insertArrayRecord(oplog.Ns, key, itemMap, studentID, &sqlStatements)
+				}
+			case map[string]interface{}:
+				continue
+				// Handle nested objects
+				// createPhoneTable(oplog.Ns, key, v, &createdTables, &sqlStatements)
+				// insertPhoneRecords(oplog.Ns, key, v, studentID, &sqlStatements)
+
 			default:
 				return "", fmt.Errorf("unsupported data type for column %s", key)
 			}
@@ -87,4 +117,44 @@ func ConvertToSQLInsert(oplogJSON string) (string, error) {
 	}
 
 	return strings.Join(sqlStatements, "\n"), nil
+}
+
+// Function to create a table for array (nested objects)
+func createArrayTable(namespace, columnName string, data map[string]interface{}, createdTables *map[string][]string, sqlStatements *[]string) {
+	tableName := fmt.Sprintf("%s.%s_%s", strings.Split(namespace, ".")[0], strings.Split(namespace, ".")[1], columnName)
+	if _, ok := (*createdTables)[tableName]; !ok {
+		var columnDefs []string
+		columnDefs = append(columnDefs, "_id VARCHAR(255) PRIMARY KEY")
+
+		columnDefs = append(columnDefs, fmt.Sprintf("%s VARCHAR(255)", strings.Split(namespace, ".")[1]+"__id"))
+		for key := range data {
+			columnDefs = append(columnDefs, fmt.Sprintf("%s VARCHAR(255)", key))
+		}
+		createTableSQL := fmt.Sprintf("CREATE TABLE %s (%s);", tableName, strings.Join(columnDefs, ", "))
+		*sqlStatements = append(*sqlStatements, createTableSQL)
+		(*createdTables)[tableName] = []string{"__id", strings.Split(namespace, ".")[1] + "__id"}
+	}
+}
+
+// // Function to insert records into array tables
+func insertArrayRecord(namespace, columnName string, data map[string]interface{}, studentID string, sqlStatements *[]string) {
+	tableName := fmt.Sprintf("%s_%s", namespace, columnName)
+	var columnNames []string
+	var values []string
+	for key, value := range data {
+		columnNames = append(columnNames, key)
+		values = append(values, fmt.Sprintf("'%v'", value))
+	}
+
+	columnNames = append(columnNames, "student__id")
+	values = append(values, fmt.Sprintf("'%s'", studentID))
+
+	insertSQL := fmt.Sprintf("INSERT INTO %s (_id, %s) VALUES ('%s', %s);", tableName, strings.Join(columnNames, ", "), generateUUID(), strings.Join(values, ", "))
+	*sqlStatements = append(*sqlStatements, insertSQL)
+}
+
+// // Function to generate a UUID (randomly generated _id)
+func generateUUID() string {
+	u := uuid.New()
+	return u.String()
 }

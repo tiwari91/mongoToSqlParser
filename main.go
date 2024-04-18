@@ -26,41 +26,41 @@ func main() {
 	}
 	fmt.Println("\n\n\nSQL Statement Insert:", sqlStatements)
 
-	fmt.Println("\n-------Update-------")
+	// fmt.Println("\n-------Update-------")
 
 	// update
-	oplogBytes, err = os.ReadFile("db/sampleFileUpdate.json")
-	if err != nil {
-		fmt.Println("Error reading oplog file:", err)
-		return
-	}
+	// oplogBytes, err = os.ReadFile("db/sampleFileUpdate.json")
+	// if err != nil {
+	// 	fmt.Println("Error reading oplog file:", err)
+	// 	return
+	// }
 
-	oplogJSON = string(oplogBytes)
+	// oplogJSON = string(oplogBytes)
 
-	sqlStatement, err := sqlconverter.ConvertToSQLUpdate([]byte(oplogJSON))
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
+	// sqlStatement, err := sqlconverter.ConvertToSQLUpdate([]byte(oplogJSON))
+	// if err != nil {
+	// 	fmt.Println("Error:", err)
+	// 	return
+	// }
 
-	fmt.Println("\nSQL Statement update:", sqlStatement)
+	// fmt.Println("\nSQL Statement update:", sqlStatement)
 
-	fmt.Println("\n-------Delete-------")
+	// fmt.Println("\n-------Delete-------")
 
-	oplogBytes, err = os.ReadFile("db/sampleFileDelete.json")
-	if err != nil {
-		fmt.Println("Error reading oplog file:", err)
-		return
-	}
+	// oplogBytes, err = os.ReadFile("db/sampleFileDelete.json")
+	// if err != nil {
+	// 	fmt.Println("Error reading oplog file:", err)
+	// 	return
+	// }
 
-	oplogJSON = string(oplogBytes)
+	// oplogJSON = string(oplogBytes)
 
-	sqlStatement, err = sqlconverter.ConvertToSQLDelete(oplogJSON)
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
+	// sqlStatement, err = sqlconverter.ConvertToSQLDelete(oplogJSON)
+	// if err != nil {
+	// 	fmt.Println("Error:", err)
+	// 	return
+	// }
 
-	fmt.Println("SQL Statement Delete:", sqlStatement)
+	// fmt.Println("SQL Statement Delete:", sqlStatement)
 
 }
