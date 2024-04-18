@@ -20,7 +20,7 @@ func ConvertToSQLInsert(oplogJSON string) (string, error) {
 	}
 
 	// Map to store generated schema and table creation SQL statements
-	createdTables := make(map[string]bool)
+	createdTables := make(map[string][]string)
 
 	var sqlStatements []string
 
@@ -55,12 +55,32 @@ func ConvertToSQLInsert(oplogJSON string) (string, error) {
 		columnDefsStr := strings.Join(columnDefinitions, ", ")
 		columnNamesStr := strings.Join(columnNames, ", ")
 
+		// Generate schema and table creation SQL statements if not already created
 		createSchemaSQL := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", strings.Split(oplog.Ns, ".")[0])
 		if _, ok := createdTables[oplog.Ns]; !ok {
 			createTableSQL := fmt.Sprintf("CREATE TABLE %s (%s);", oplog.Ns, columnDefsStr)
 			sqlStatements = append(sqlStatements, createSchemaSQL, createTableSQL)
-			createdTables[oplog.Ns] = true
+			createdTables[oplog.Ns] = columnNames
 		}
+
+		var alterTableSQL []string
+
+		// Extract column names from the createdTables map
+		columnNamesFromCreateTable, ok := createdTables[oplog.Ns]
+		if !ok {
+			return "", fmt.Errorf("no table created for namespace %s", oplog.Ns)
+		}
+
+		//fmt.Println("\ncreatedTables:", createdTables)
+
+		for key := range data {
+			if !contains(columnNamesFromCreateTable, key) {
+				alterTableSQL = append(alterTableSQL, fmt.Sprintf("ALTER TABLE %s ADD %s VARCHAR(255);", oplog.Ns, key))
+				createdTables[oplog.Ns] = append(createdTables[oplog.Ns], key)
+			}
+		}
+
+		sqlStatements = append(sqlStatements, alterTableSQL...)
 
 		insertSQL := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s);", oplog.Ns, columnNamesStr, valuesStr)
 		sqlStatements = append(sqlStatements, insertSQL)

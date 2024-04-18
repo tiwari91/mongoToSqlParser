@@ -18,7 +18,21 @@
 		"name": "George Smith",
 		"roll_no": 21,
 		"is_graduated": true,
-		"date_of_birth": "2001-03-23"
+		"date_of_birth": "2001-03-23",
+		"phone": "+91-81254966457"
 	  }
-	}
-  ]
+	},
+	{
+		"op": "i",
+		"ns": "test.student",
+		"o": {
+		  "_id": "14798c213f273a7ca2cf5174",
+		  "name": "George Smith",
+		  "roll_no": 21,
+		  "is_graduated": true,
+		  "date_of_birth": "2001-03-23",
+		  "phone": "+91-81254966457",
+		  "address":"CA"
+		}
+	  }
+]

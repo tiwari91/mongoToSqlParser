@@ -24,7 +24,7 @@ func main() {
 		fmt.Println("Error:", err)
 		return
 	}
-	fmt.Println("\nSQL Statement Insert:", sqlStatements)
+	fmt.Println("\n\n\nSQL Statement Insert:", sqlStatements)
 
 	fmt.Println("\n-------Update-------")
 
