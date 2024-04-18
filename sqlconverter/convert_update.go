@@ -26,6 +26,9 @@ func ConvertToSQLUpdate(oplogJSON []byte) (string, error) {
 	var sqlStatements []string
 
 	for _, oplog := range oplogs {
+		if oplog.Op == "i" || oplog.Op == "d" {
+			continue
+		}
 		var data map[string]interface{}
 		err = json.Unmarshal(oplog.O, &data)
 		if err != nil {

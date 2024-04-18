@@ -27,6 +27,9 @@ func ConvertToSQLInsert(oplogJSON string) (string, error) {
 	var sqlStatements []string
 
 	for _, oplog := range oplogs {
+		if oplog.Op == "u" || oplog.Op == "d" {
+			continue
+		}
 		var data map[string]interface{}
 		err = json.Unmarshal(oplog.O, &data)
 		if err != nil {
@@ -74,6 +77,7 @@ func ConvertToSQLInsert(oplogJSON string) (string, error) {
 				//fmt.Println("v map[string]interface", v)
 				// Handle nested objects
 				createTable(oplog.Ns, key, v, &createdTables, &sqlStatements)
+
 				studentID := getStudentId(data)
 				if studentID == "" {
 					return "", fmt.Errorf("student ID not found in oplog data")
