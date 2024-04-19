@@ -2,6 +2,8 @@ package sqlconverter
 
 import (
 	"fmt"
+
+	"github.com/google/uuid"
 )
 
 func contains(arr []string, item string) bool {
@@ -23,4 +25,10 @@ func getStudentId(data map[string]interface{}) string {
 	}
 
 	return studentID
+}
+
+// Function to generate a UUID (randomly generated _id)
+func generateUUID() string {
+	u := uuid.New()
+	return u.String()
 }

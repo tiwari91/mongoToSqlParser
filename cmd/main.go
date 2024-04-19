@@ -28,5 +28,7 @@ func main() {
 
 	oplogJSON := string(oplogBytes)
 
+	//fmt.Println("oplogJSON", oplogJSON)
+
 	sqlconverter.ProcessLogFile(oplogJSON, *outputFilename)
 }

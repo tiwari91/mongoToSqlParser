@@ -28,6 +28,7 @@ func ProcessLogFile(oplogJSON, outputFilename string) error {
 
 	var sqlStatements []string
 
+	//fmt.Println("oplogs", oplogs)
 	for _, oplog := range oplogs {
 		var data map[string]interface{}
 		err = json.Unmarshal(oplog.O, &data)
@@ -37,6 +38,7 @@ func ProcessLogFile(oplogJSON, outputFilename string) error {
 
 		switch oplog.Op {
 		case "i":
+			//	fmt.Println("data", data)
 			sqlStatement, err := ConvertToSQLInsert(oplog.Ns, data, existingSchemas, createdTables)
 			if err != nil {
 				fmt.Println("Error:", err)
