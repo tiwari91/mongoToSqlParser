@@ -22,7 +22,9 @@ func ProcessLogFile(oplogJSON, outputFilename string) error {
 		return err
 	}
 
-	//uniqueSQL := make(map[string]struct{})
+	// Initialize existingSchemas map
+	existingSchemas := make(map[string]bool)
+
 	var sqlStatements []string
 
 	for _, oplog := range oplogs {
@@ -34,7 +36,7 @@ func ProcessLogFile(oplogJSON, outputFilename string) error {
 
 		switch oplog.Op {
 		case "i":
-			sqlStatement, err := ConvertToSQLInsert(oplog.Ns, data)
+			sqlStatement, err := ConvertToSQLInsert(oplog.Ns, data, existingSchemas)
 			if err != nil {
 				fmt.Println("Error:", err)
 				continue

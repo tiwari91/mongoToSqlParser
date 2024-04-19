@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func ConvertToSQLInsert(namespace string, data map[string]interface{}) (string, error) {
+func ConvertToSQLInsert(namespace string, data map[string]interface{}, existingSchemas map[string]bool) (string, error) {
 
 	// Map to store generated schema and table creation SQL statements
 	createdTables := make(map[string][]string)
@@ -18,9 +18,11 @@ func ConvertToSQLInsert(namespace string, data map[string]interface{}) (string, 
 	var columnDefinitions []string
 	var columnNames []string
 
-	// Generate schema and table creation SQL statements if not already created
 	createSchemaSQL := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", strings.Split(namespace, ".")[0])
-	sqlStatements = append(sqlStatements, createSchemaSQL)
+	if _, ok := existingSchemas[strings.Split(namespace, ".")[0]]; !ok {
+		sqlStatements = append(sqlStatements, createSchemaSQL)
+		existingSchemas[strings.Split(namespace, ".")[0]] = true
+	}
 
 	for key, value := range data {
 		columnNames = append(columnNames, key)
