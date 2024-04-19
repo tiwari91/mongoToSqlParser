@@ -7,10 +7,9 @@ import (
 	"github.com/google/uuid"
 )
 
-func ConvertToSQLInsert(namespace string, data map[string]interface{}, existingSchemas map[string]bool) (string, error) {
-
-	// Map to store generated schema and table creation SQL statements
-	createdTables := make(map[string][]string)
+func ConvertToSQLInsert(namespace string, data map[string]interface{},
+	existingSchemas map[string]bool,
+	createdTables map[string][]string) (string, error) {
 
 	var sqlStatements []string
 
@@ -77,7 +76,7 @@ func ConvertToSQLInsert(namespace string, data map[string]interface{}, existingS
 	columnDefsStr := strings.Join(columnDefinitions, ", ")
 	columnNamesStr := strings.Join(columnNames, ", ")
 
-	if _, ok := createdTables[namespace]; !ok {
+	if len(createdTables[namespace]) == 0 {
 		createTableSQL := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s);", namespace, columnDefsStr)
 		sqlStatements = append(sqlStatements, createTableSQL)
 		createdTables[namespace] = columnNames
@@ -119,6 +118,8 @@ func createTable(namespace, columnName string, data map[string]interface{}, crea
 		for key := range data {
 			columnDefs = append(columnDefs, fmt.Sprintf("%s VARCHAR(255)", key))
 		}
+		fmt.Println("isnde createTable")
+
 		createTableSQL := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s);", tableName, strings.Join(columnDefs, ", "))
 		*sqlStatements = append(*sqlStatements, createTableSQL)
 		(*createdTables)[tableName] = []string{"__id", strings.Split(namespace, ".")[1] + "__id"}

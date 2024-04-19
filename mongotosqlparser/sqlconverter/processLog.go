@@ -24,6 +24,7 @@ func ProcessLogFile(oplogJSON, outputFilename string) error {
 
 	// Initialize existingSchemas map
 	existingSchemas := make(map[string]bool)
+	createdTables := make(map[string][]string)
 
 	var sqlStatements []string
 
@@ -36,7 +37,7 @@ func ProcessLogFile(oplogJSON, outputFilename string) error {
 
 		switch oplog.Op {
 		case "i":
-			sqlStatement, err := ConvertToSQLInsert(oplog.Ns, data, existingSchemas)
+			sqlStatement, err := ConvertToSQLInsert(oplog.Ns, data, existingSchemas, createdTables)
 			if err != nil {
 				fmt.Println("Error:", err)
 				continue
