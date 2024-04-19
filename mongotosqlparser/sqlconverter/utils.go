@@ -1,6 +1,8 @@
 package sqlconverter
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func contains(arr []string, item string) bool {
 	for _, value := range arr {
