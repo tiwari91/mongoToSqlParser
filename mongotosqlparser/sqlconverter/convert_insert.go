@@ -57,7 +57,7 @@ func ConvertToSQLInsert(namespace string, data map[string]interface{},
 
 	// Check if the table already exists
 	if tableExists(namespace, createdTables) {
-		// If the table exists and cols are same, perform alterations
+		// If the table exists and cols are not same then perform alterations
 		alterTable(columnNames, createdTables, namespace, &sqlStatements)
 
 	} else {
@@ -69,9 +69,6 @@ func ConvertToSQLInsert(namespace string, data map[string]interface{},
 
 	insertSQL := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s);", namespace, strings.Join(columnNames, ", "), valuesStr)
 	sqlStatements = append(sqlStatements, insertSQL)
-
-	// fmt.Println("nonNestedData", nonNestedData)
-	// fmt.Println("nestedData", nestedData)
 
 	// Process nested data
 	for key, value := range nestedData {

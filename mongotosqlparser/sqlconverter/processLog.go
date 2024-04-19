@@ -38,7 +38,6 @@ func ProcessLogFile(oplogJSON, outputFilename string) error {
 
 		switch oplog.Op {
 		case "i":
-			//	fmt.Println("data", data)
 			sqlStatement, err := ConvertToSQLInsert(oplog.Ns, data, existingSchemas, createdTables)
 			if err != nil {
 				fmt.Println("Error:", err)
