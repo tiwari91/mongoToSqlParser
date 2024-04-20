@@ -3,10 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"mongotosqlparser/mongotosqlparser/sqlconverter"
+	"os"
 	"time"
 
-	"os"
+	"github.com/tiwari91/mongoparser/internal/logparser"
 )
 
 func main() {
@@ -33,7 +33,7 @@ func main() {
 
 	//fmt.Println("oplogJSON", oplogJSON)
 
-	sqlconverter.ProcessLogFile(oplogJSON, *outputFilename)
+	logparser.ProcessLogFile(oplogJSON, *outputFilename)
 
 	endTime := time.Since(start)
 
