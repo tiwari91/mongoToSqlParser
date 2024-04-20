@@ -36,7 +36,7 @@ func ProcessLogFile(oplogJSON, outputFilename string) error {
 	processedOplogs := make(map[string]bool)
 	var processedOplogsMu sync.Mutex
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 20; i++ {
 		wg.Add(1)
 		go worker(&wg, oplogs, resultChannel, existingSchemas, createdTables, processedOplogs, &processedOplogsMu)
 	}
