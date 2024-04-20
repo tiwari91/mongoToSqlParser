@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/tiwari91/mongoparser/internal/logparser"
+	"github.com/tiwari91/mongoparser/internal/service"
 )
 
 func main() {
@@ -33,7 +33,7 @@ func main() {
 
 	//fmt.Println("oplogJSON", oplogJSON)
 
-	logparser.ProcessLogFile(oplogJSON, *outputFilename)
+	service.ProcessLogFile(oplogJSON, *outputFilename)
 
 	endTime := time.Since(start)
 

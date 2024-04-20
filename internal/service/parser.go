@@ -1,4 +1,4 @@
-package logparser
+package service
 
 import (
 	"encoding/json"

@@ -1,4 +1,4 @@
-package logparser
+package service
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/tiwari91/mongoparser/internal/service"
+	"github.com/tiwari91/mongoparser/internal/domain"
 )
 
 func worker(wg *sync.WaitGroup, oplogs []Oplog, resultChannel chan<- string, existingSchemas map[string]bool,
@@ -32,11 +32,11 @@ func worker(wg *sync.WaitGroup, oplogs []Oplog, resultChannel chan<- string, exi
 
 		switch oplog.Op {
 		case "i":
-			err = service.ProcessInsert(oplog.Ns, data, existingSchemas, createdTables, resultChannel)
+			err = domain.ProcessInsert(oplog.Ns, data, existingSchemas, createdTables, resultChannel)
 		case "u":
-			err = service.ConvertToSQLUpdate(oplog.Ns, oplog.O2.ID, data, resultChannel)
+			err = domain.ConvertToSQLUpdate(oplog.Ns, oplog.O2.ID, data, resultChannel)
 		case "d":
-			err = service.ConvertToSQLDelete(oplog.Ns, data, resultChannel)
+			err = domain.ConvertToSQLDelete(oplog.Ns, data, resultChannel)
 		default:
 			continue
 		}
