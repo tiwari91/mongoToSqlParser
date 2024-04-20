@@ -118,16 +118,6 @@ func alterTable(columnNames []string, createdTables map[string][]string, namespa
 	}
 }
 
-// Function to check if a value is nested (array or object)
-func isNested(value interface{}) bool {
-	switch value.(type) {
-	case []interface{}, map[string]interface{}:
-		return true
-	default:
-		return false
-	}
-}
-
 // Function to create a table for array (nested objects)
 func createTable(namespace, columnName string, data map[string]interface{}, createdTables *map[string][]string, output chan<- string) {
 	tableName := fmt.Sprintf("%s.%s_%s", strings.Split(namespace, ".")[0], strings.Split(namespace, ".")[1], columnName)
@@ -184,10 +174,4 @@ func insertRecords(namespace, columnName string, data map[string]interface{}, st
 		insertSQL := fmt.Sprintf("INSERT INTO %s (_id, %s) VALUES ('%s', %s);", tableName, strings.Join(columnNames, ", "), generateUUID(), strings.Join(values, ", "))
 		output <- insertSQL
 	}
-}
-
-// Function to check if a table exists in the database schema
-func tableExists(namespace string, existingSchemas map[string][]string) bool {
-	_, exists := existingSchemas[namespace]
-	return exists
 }
