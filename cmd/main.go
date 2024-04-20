@@ -4,11 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"mongotosqlparser/mongotosqlparser/sqlconverter"
+	"time"
 
 	"os"
 )
 
 func main() {
+
+	start := time.Now()
 
 	inputFilename := flag.String("input", "", "Input filename containing oplogs")
 	outputFilename := flag.String("output", "", "Output filename to write SQL statements")
@@ -31,4 +34,8 @@ func main() {
 	//fmt.Println("oplogJSON", oplogJSON)
 
 	sqlconverter.ProcessLogFile(oplogJSON, *outputFilename)
+
+	endTime := time.Since(start)
+
+	fmt.Println("time took for processing:", endTime)
 }
