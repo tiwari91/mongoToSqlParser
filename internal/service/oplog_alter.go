@@ -1,4 +1,4 @@
-package domain
+package service
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"github.com/tiwari91/mongoparser/internal/utils"
 )
 
-func AlterTable(columnNames []string, createdTables map[string][]string, namespace string, output chan<- string) {
+func alterTable(columnNames []string, createdTables map[string][]string, namespace string, output chan<- string) {
 	for _, columnName := range columnNames {
 		if !utils.Contains(createdTables[namespace], columnName) {
 			alterTableSQL := fmt.Sprintf("ALTER TABLE %s ADD %s VARCHAR(255);", namespace, columnName)

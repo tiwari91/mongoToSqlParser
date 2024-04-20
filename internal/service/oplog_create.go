@@ -1,4 +1,4 @@
-package domain
+package service
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/tiwari91/mongoparser/internal/utils"
 )
 
-func CreateTable(namespace, columnName string, data map[string]interface{}, createdTables *map[string][]string, output chan<- string) {
+func createTable(namespace, columnName string, data map[string]interface{}, createdTables *map[string][]string, output chan<- string) {
 	tableName := fmt.Sprintf("%s.%s_%s", strings.Split(namespace, ".")[0], strings.Split(namespace, ".")[1], columnName)
 	if len((*createdTables)[tableName]) == 0 {
 		var columnDefs []string

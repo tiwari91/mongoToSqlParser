@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tiwari91/mongoparser/internal/domain"
 	"github.com/tiwari91/mongoparser/internal/utils"
 )
 
@@ -59,7 +58,7 @@ func ProcessInsert(namespace string, data map[string]interface{},
 	// Check if the table already exists
 	if utils.TableExists(namespace, createdTables) {
 		// If the table exists and columns are not the same then perform alterations
-		domain.AlterTable(columnNames, createdTables, namespace, output)
+		alterTable(columnNames, createdTables, namespace, output)
 
 	} else {
 		// If the table does not exist, create it
@@ -83,7 +82,7 @@ func ProcessInsert(namespace string, data map[string]interface{},
 				}
 
 				// Create a table for the array if not already created
-				domain.CreateTable(namespace, key, itemMap, &createdTables, output)
+				createTable(namespace, key, itemMap, &createdTables, output)
 
 				studentID := utils.GetStudentId(data)
 				if studentID == "" {
@@ -91,17 +90,17 @@ func ProcessInsert(namespace string, data map[string]interface{},
 				}
 
 				// Insert records into the array table
-				domain.InsertRecords(namespace, key, itemMap, studentID, output, createdTables)
+				insertTable(namespace, key, itemMap, studentID, output, createdTables)
 			}
 		case map[string]interface{}:
 			// Handle nested objects
-			domain.CreateTable(namespace, key, v, &createdTables, output)
+			createTable(namespace, key, v, &createdTables, output)
 
 			studentID := utils.GetStudentId(data)
 			if studentID == "" {
 				return fmt.Errorf("student ID not found in oplog data")
 			}
-			domain.InsertRecords(namespace, key, v, studentID, output, createdTables)
+			insertTable(namespace, key, v, studentID, output, createdTables)
 		default:
 			return fmt.Errorf("unsupported data type for nested column %s", key)
 		}

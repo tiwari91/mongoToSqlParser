@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/tiwari91/mongoparser/internal/domain"
 	"github.com/tiwari91/mongoparser/internal/service"
 )
 
@@ -35,9 +34,9 @@ func worker(wg *sync.WaitGroup, oplogs []Oplog, resultChannel chan<- string, exi
 		case "i":
 			err = service.ProcessInsert(oplog.Ns, data, existingSchemas, createdTables, resultChannel)
 		case "u":
-			err = domain.ConvertToSQLUpdate(oplog.Ns, oplog.O2.ID, data, resultChannel)
+			err = service.ConvertToSQLUpdate(oplog.Ns, oplog.O2.ID, data, resultChannel)
 		case "d":
-			err = domain.ConvertToSQLDelete(oplog.Ns, data, resultChannel)
+			err = service.ConvertToSQLDelete(oplog.Ns, data, resultChannel)
 		default:
 			continue
 		}

@@ -1,4 +1,4 @@
-package domain
+package service
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/tiwari91/mongoparser/internal/utils"
 )
 
-func InsertRecords(namespace, columnName string, data map[string]interface{}, studentID string, output chan<- string, createdTables map[string][]string) {
+func insertTable(namespace, columnName string, data map[string]interface{}, studentID string, output chan<- string, createdTables map[string][]string) {
 	tableName := fmt.Sprintf("%s_%s", namespace, columnName)
 
 	if columns, ok := createdTables[tableName]; ok {
