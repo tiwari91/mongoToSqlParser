@@ -29,7 +29,7 @@ func ProcessLogFile(oplogJSON, outputFilename string) error {
 	createdTables := make(map[string][]string)
 
 	var wg sync.WaitGroup
-	results := make(chan string, len(oplogs))
+	resultChannel := make(chan string, len(oplogs))
 
 	// Start worker pool
 	//fmt.Println("len(oplogs)", len(oplogs))
@@ -39,12 +39,14 @@ func ProcessLogFile(oplogJSON, outputFilename string) error {
 
 	for i := 0; i < len(oplogs); i++ {
 		wg.Add(1)
-		go worker(&wg, oplogs, results, existingSchemas,
+		go worker(&wg, oplogs, resultChannel, existingSchemas,
 			createdTables, processedOplogs, &processedOplogsMu)
 	}
 
-	wg.Wait()
-	close(results)
+	go func() {
+		wg.Wait()
+		close(resultChannel)
+	}()
 
 	// Collect results
 	file, err := os.OpenFile(outputFilename, os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
@@ -53,7 +55,7 @@ func ProcessLogFile(oplogJSON, outputFilename string) error {
 	}
 	defer file.Close()
 
-	for result := range results {
+	for result := range resultChannel {
 		_, err := file.WriteString(result + "\n")
 		if err != nil {
 			return err
@@ -63,7 +65,7 @@ func ProcessLogFile(oplogJSON, outputFilename string) error {
 	return nil
 }
 
-func worker(wg *sync.WaitGroup, oplogs []Oplog, results chan<- string,
+func worker(wg *sync.WaitGroup, oplogs []Oplog, resultChannel chan<- string,
 	existingSchemas map[string]bool, createdTables map[string][]string,
 	processedOplogs map[string]bool, processedOplogsMu *sync.Mutex) {
 
@@ -72,10 +74,7 @@ func worker(wg *sync.WaitGroup, oplogs []Oplog, results chan<- string,
 	processedOplogsMu.Lock()
 	defer processedOplogsMu.Unlock()
 
-	var sqlStatement string
-
 	for index, oplog := range oplogs {
-
 		if processedOplogs[strconv.Itoa(index)] {
 			continue
 		}
@@ -84,29 +83,24 @@ func worker(wg *sync.WaitGroup, oplogs []Oplog, results chan<- string,
 		var data map[string]interface{}
 		err := json.Unmarshal(oplog.O, &data)
 		if err != nil {
-			results <- fmt.Sprintf("Error unmarshaling JSON: %s", err)
+			resultChannel <- fmt.Sprintf("Error unmarshaling JSON: %s", err)
 			continue
 		}
 
 		switch oplog.Op {
 		case "i":
-			//fmt.Println("insert processing")
-			sqlStatement, err = ConvertToSQLInsert(oplog.Ns, data, existingSchemas, createdTables)
+			err = ConvertToSQLInsert(oplog.Ns, data, existingSchemas, createdTables, resultChannel)
 		case "u":
-			//fmt.Println("udpate processing")
-			sqlStatement, err = ConvertToSQLUpdate(oplog.Ns, oplog.O2.ID, data)
+			err = ConvertToSQLUpdate(oplog.Ns, oplog.O2.ID, data, resultChannel)
 		case "d":
-			//fmt.Println("delete processing")
-			sqlStatement, err = ConvertToSQLDelete(oplog.Ns, data)
+			err = ConvertToSQLDelete(oplog.Ns, data, resultChannel)
 		default:
 			continue
 		}
 
 		if err != nil {
-			results <- fmt.Sprintf("Error: %s", err)
+			resultChannel <- fmt.Sprintf("Error: %s", err)
 			continue
 		}
-
-		results <- sqlStatement
 	}
 }

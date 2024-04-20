@@ -6,21 +6,15 @@ import (
 )
 
 func ConvertToSQLInsert(namespace string, data map[string]interface{},
-	existingSchemas map[string]bool,
-	createdTables map[string][]string) (string, error) {
-
-	var sqlStatements []string
+	existingSchemas map[string]bool, createdTables map[string][]string,
+	output chan<- string) error {
 
 	var nonNestedData = make(map[string]interface{})
 	var nestedData = make(map[string]interface{})
 
-	var jsonValues []string
-	var columnDefinitions []string
-	var columnNames []string
-
 	createSchemaSQL := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", strings.Split(namespace, ".")[0])
 	if _, ok := existingSchemas[strings.Split(namespace, ".")[0]]; !ok {
-		sqlStatements = append(sqlStatements, createSchemaSQL)
+		output <- createSchemaSQL
 		existingSchemas[strings.Split(namespace, ".")[0]] = true
 	}
 
@@ -34,6 +28,10 @@ func ConvertToSQLInsert(namespace string, data map[string]interface{},
 	}
 
 	// Process non-nested data first
+	var columnNames []string
+	var jsonValues []string
+	var columnDefinitions []string
+
 	for key, value := range nonNestedData {
 		columnNames = append(columnNames, key)
 		switch v := value.(type) {
@@ -47,7 +45,7 @@ func ConvertToSQLInsert(namespace string, data map[string]interface{},
 			jsonValues = append(jsonValues, fmt.Sprintf("%t", v))
 			columnDefinitions = append(columnDefinitions, fmt.Sprintf("%s BOOLEAN", key))
 		default:
-			return "", fmt.Errorf("unsupported data type for non-nested column %s", key)
+			return fmt.Errorf("unsupported data type for non-nested column %s", key)
 		}
 	}
 
@@ -57,18 +55,18 @@ func ConvertToSQLInsert(namespace string, data map[string]interface{},
 
 	// Check if the table already exists
 	if tableExists(namespace, createdTables) {
-		// If the table exists and cols are not same then perform alterations
-		alterTable(columnNames, createdTables, namespace, &sqlStatements)
+		// If the table exists and columns are not the same then perform alterations
+		alterTable(columnNames, createdTables, namespace, output)
 
 	} else {
 		// If the table does not exist, create it
 		createTableSQL := fmt.Sprintf("CREATE TABLE %s IF NOT EXISTS (%s);", namespace, columnDefsStr)
-		sqlStatements = append(sqlStatements, createTableSQL)
+		output <- createTableSQL
 		createdTables[namespace] = append(createdTables[namespace], columnNames...)
 	}
 
 	insertSQL := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s);", namespace, strings.Join(columnNames, ", "), valuesStr)
-	sqlStatements = append(sqlStatements, insertSQL)
+	output <- insertSQL
 
 	// Process nested data
 	for key, value := range nestedData {
@@ -78,46 +76,44 @@ func ConvertToSQLInsert(namespace string, data map[string]interface{},
 			for _, item := range v {
 				itemMap, ok := item.(map[string]interface{})
 				if !ok {
-					return "", fmt.Errorf("unable to parse array item for column %s", key)
+					return fmt.Errorf("unable to parse array item for column %s", key)
 				}
 
 				// Create a table for the array if not already created
-				createTable(namespace, key, itemMap, &createdTables, &sqlStatements)
+				createTable(namespace, key, itemMap, &createdTables, output)
 
 				studentID := getStudentId(data)
 				if studentID == "" {
-					return "", fmt.Errorf("student ID not found in oplog data")
+					return fmt.Errorf("student ID not found in oplog data")
 				}
 
 				// Insert records into the array table
-				insertRecords(namespace, key, itemMap, studentID, &sqlStatements, createdTables)
+				insertRecords(namespace, key, itemMap, studentID, output, createdTables)
 			}
 		case map[string]interface{}:
 			// Handle nested objects
-			createTable(namespace, key, v, &createdTables, &sqlStatements)
+			createTable(namespace, key, v, &createdTables, output)
 
 			studentID := getStudentId(data)
 			if studentID == "" {
-				return "", fmt.Errorf("student ID not found in oplog data")
+				return fmt.Errorf("student ID not found in oplog data")
 			}
-			insertRecords(namespace, key, v, studentID, &sqlStatements, createdTables)
+			insertRecords(namespace, key, v, studentID, output, createdTables)
 		default:
-			return "", fmt.Errorf("unsupported data type for nested column %s", key)
+			return fmt.Errorf("unsupported data type for nested column %s", key)
 		}
 	}
 
-	return strings.Join(sqlStatements, "\n"), nil
+	return nil
 }
 
 // Function to alter the table if needed
-func alterTable(columnNames []string, createdTables map[string][]string, namespace string, sqlStatements *[]string) {
-	var alterTableSQL []string
-
+func alterTable(columnNames []string, createdTables map[string][]string, namespace string, output chan<- string) {
 	for _, columnName := range columnNames {
 		if !contains(createdTables[namespace], columnName) {
-			alterTableSQL = append(alterTableSQL, fmt.Sprintf("ALTER TABLE %s ADD %s VARCHAR(255);", namespace, columnName))
+			alterTableSQL := fmt.Sprintf("ALTER TABLE %s ADD %s VARCHAR(255);", namespace, columnName)
 			createdTables[namespace] = append(createdTables[namespace], columnName)
-			*sqlStatements = append(*sqlStatements, alterTableSQL[len(alterTableSQL)-1])
+			output <- alterTableSQL
 		}
 	}
 }
@@ -133,7 +129,7 @@ func isNested(value interface{}) bool {
 }
 
 // Function to create a table for array (nested objects)
-func createTable(namespace, columnName string, data map[string]interface{}, createdTables *map[string][]string, sqlStatements *[]string) {
+func createTable(namespace, columnName string, data map[string]interface{}, createdTables *map[string][]string, output chan<- string) {
 	tableName := fmt.Sprintf("%s.%s_%s", strings.Split(namespace, ".")[0], strings.Split(namespace, ".")[1], columnName)
 	if len((*createdTables)[tableName]) == 0 {
 		var columnDefs []string
@@ -143,7 +139,7 @@ func createTable(namespace, columnName string, data map[string]interface{}, crea
 			columnDefs = append(columnDefs, fmt.Sprintf("%s VARCHAR(255)", key))
 		}
 		createTableSQL := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s);", tableName, strings.Join(columnDefs, ", "))
-		*sqlStatements = append(*sqlStatements, createTableSQL)
+		output <- createTableSQL
 		(*createdTables)[tableName] = []string{"__id", strings.Split(namespace, ".")[1] + "__id"}
 
 		for key := range data {
@@ -162,13 +158,13 @@ func createTable(namespace, columnName string, data map[string]interface{}, crea
 		}
 		if len(alterColumns) > 0 {
 			alterTableSQL := fmt.Sprintf("ALTER TABLE %s %s;", tableName, strings.Join(alterColumns, ", "))
-			*sqlStatements = append(*sqlStatements, alterTableSQL)
+			output <- alterTableSQL
 		}
 	}
 }
 
 // Function to insert records into array tables
-func insertRecords(namespace, columnName string, data map[string]interface{}, studentID string, sqlStatements *[]string, createdTables map[string][]string) {
+func insertRecords(namespace, columnName string, data map[string]interface{}, studentID string, output chan<- string, createdTables map[string][]string) {
 	tableName := fmt.Sprintf("%s_%s", namespace, columnName)
 
 	if columns, ok := createdTables[tableName]; ok {
@@ -186,7 +182,7 @@ func insertRecords(namespace, columnName string, data map[string]interface{}, st
 		values = append(values, fmt.Sprintf("'%s'", studentID))
 
 		insertSQL := fmt.Sprintf("INSERT INTO %s (_id, %s) VALUES ('%s', %s);", tableName, strings.Join(columnNames, ", "), generateUUID(), strings.Join(values, ", "))
-		*sqlStatements = append(*sqlStatements, insertSQL)
+		output <- insertSQL
 	}
 }
 

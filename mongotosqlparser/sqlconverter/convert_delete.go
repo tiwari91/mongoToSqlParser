@@ -2,12 +2,11 @@ package sqlconverter
 
 import (
 	"fmt"
-	"strings"
 )
 
-func ConvertToSQLDelete(namespace string, data map[string]interface{}) (string, error) {
+func ConvertToSQLDelete(namespace string, data map[string]interface{},
+	resultChannel chan<- string) error {
 
-	var sqlStatements []string
 	var condition string
 
 	for key, value := range data {
@@ -18,7 +17,7 @@ func ConvertToSQLDelete(namespace string, data map[string]interface{}) (string, 
 	}
 
 	sqlStatement := fmt.Sprintf("DELETE FROM %s WHERE %s;", namespace, condition)
-	sqlStatements = append(sqlStatements, sqlStatement)
+	resultChannel <- sqlStatement
 
-	return strings.Join(sqlStatements, "\n"), nil
+	return nil
 }

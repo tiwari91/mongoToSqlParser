@@ -5,8 +5,9 @@ import (
 	"strings"
 )
 
-func ConvertToSQLUpdate(namespace string, ID string, data map[string]interface{}) (string, error) {
-	var sqlStatements []string
+func ConvertToSQLUpdate(namespace string, ID string,
+	data map[string]interface{},
+	resultChannel chan<- string) error {
 	var updateFields []string
 
 	for _, value := range data {
@@ -27,7 +28,8 @@ func ConvertToSQLUpdate(namespace string, ID string, data map[string]interface{}
 	condition := fmt.Sprintf("_id = '%s'", ID)
 	updateStr := strings.Join(updateFields, ", ")
 	sqlStatement := fmt.Sprintf("UPDATE %s SET %s WHERE %s;", namespace, updateStr, condition)
-	sqlStatements = append(sqlStatements, sqlStatement)
 
-	return strings.Join(sqlStatements, "\n"), nil
+	resultChannel <- sqlStatement
+
+	return nil
 }
