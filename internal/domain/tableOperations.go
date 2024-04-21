@@ -8,7 +8,7 @@ import (
 )
 
 func CreateTable(namespace, columnName string, data map[string]interface{}, createdTables *map[string][]string,
-	sqlStatements *[]string) {
+	statementChannel chan string) {
 	tableName := fmt.Sprintf("%s.%s_%s", strings.Split(namespace, ".")[0], strings.Split(namespace, ".")[1], columnName)
 	if len((*createdTables)[tableName]) == 0 {
 		var columnDefs []string
@@ -18,8 +18,8 @@ func CreateTable(namespace, columnName string, data map[string]interface{}, crea
 			columnDefs = append(columnDefs, fmt.Sprintf("%s VARCHAR(255)", key))
 		}
 		createTableSQL := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (%s);", tableName, strings.Join(columnDefs, ", "))
-		//output <- createTableSQL
-		*sqlStatements = append(*sqlStatements, createTableSQL)
+		statementChannel <- createTableSQL
+		//*sqlStatements = append(*sqlStatements, createTableSQL)
 		(*createdTables)[tableName] = []string{"__id", strings.Split(namespace, ".")[1] + "__id"}
 
 		for key := range data {
@@ -38,8 +38,8 @@ func CreateTable(namespace, columnName string, data map[string]interface{}, crea
 		}
 		if len(alterColumns) > 0 {
 			alterTableSQL := fmt.Sprintf("ALTER TABLE %s %s;", tableName, strings.Join(alterColumns, ", "))
-			*sqlStatements = append(*sqlStatements, alterTableSQL)
-			//output <- alterTableSQL
+			//*sqlStatements = append(*sqlStatements, alterTableSQL)
+			statementChannel <- alterTableSQL
 			//output = append(output, alterTableSQL)
 		}
 	}
@@ -47,7 +47,7 @@ func CreateTable(namespace, columnName string, data map[string]interface{}, crea
 }
 
 func InsertTable(namespace, columnName string, data map[string]interface{}, studentID string,
-	createdTables map[string][]string, sqlStatements *[]string) {
+	createdTables map[string][]string, statementChannel chan string) {
 	tableName := fmt.Sprintf("%s_%s", namespace, columnName)
 
 	if columns, ok := createdTables[tableName]; ok {
@@ -65,20 +65,20 @@ func InsertTable(namespace, columnName string, data map[string]interface{}, stud
 		values = append(values, fmt.Sprintf("'%s'", studentID))
 
 		insertSQL := fmt.Sprintf("INSERT INTO %s (_id, %s) VALUES ('%s', %s);", tableName, strings.Join(columnNames, ", "), utils.GenerateUUID(), strings.Join(values, ", "))
-		//output <- insertSQL
-		*sqlStatements = append(*sqlStatements, insertSQL)
+		statementChannel <- insertSQL
+		//*sqlStatements = append(*sqlStatements, insertSQL)
 	}
 
 }
 
 func AlterTable(columnNames []string, createdTables map[string][]string, namespace string,
-	sqlStatements *[]string) {
+	statementChannel chan string) {
 	for _, columnName := range columnNames {
 		if !utils.Contains(createdTables[namespace], columnName) {
 			alterTableSQL := fmt.Sprintf("ALTER TABLE %s ADD %s VARCHAR(255);", namespace, columnName)
 			createdTables[namespace] = append(createdTables[namespace], columnName)
-			//output <- alterTableSQL
-			*sqlStatements = append(*sqlStatements, alterTableSQL)
+			statementChannel <- alterTableSQL
+			//*sqlStatements = append(*sqlStatements, alterTableSQL)
 		}
 	}
 

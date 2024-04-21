@@ -28,6 +28,8 @@ func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 		wg                sync.WaitGroup
 		existingSchemas   = make(map[string]bool)
 		createdTables     = make(map[string][]string)
+		done              = make(chan struct{})
+		statementChannel  = make(chan string, 100)
 	)
 
 	inputFile, err := os.Open(inputFilename)
@@ -44,6 +46,13 @@ func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 
 	decoder := json.NewDecoder(bufio.NewReader(inputFile))
 
+	go func() {
+		for statement := range statementChannel {
+			writer.WriterStreamFile(outputFile, statement)
+		}
+		close(done)
+	}()
+
 	for decoder.More() {
 		if err := decoder.Decode(&oplogs); err != nil {
 			fmt.Printf("Error decoding JSON: %s\n", err)
@@ -55,24 +64,24 @@ func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 			go func(oplog Oplog) {
 				defer wg.Done()
 
+				var data map[string]interface{}
+
 				processedOplogsMu.Lock()
 				defer processedOplogsMu.Unlock()
 
-				var data map[string]interface{}
 				err = json.Unmarshal(oplog.O, &data)
 				if err != nil {
 					fmt.Printf("Error unmarshaling JSON: %s", err)
 					return
 				}
 
-				var statement string
 				switch oplog.Op {
 				case "i":
-					statement, err = processInsertOperation(oplog.Ns, data, existingSchemas, createdTables)
+					err = processInsertOperation(oplog.Ns, data, existingSchemas, createdTables, statementChannel)
 				case "u":
-					statement, err = processUpdateOperation(oplog.Ns, oplog.O2.ID, data)
+					err = processUpdateOperation(oplog.Ns, oplog.O2.ID, data, statementChannel)
 				case "d":
-					statement, err = processDeleteOperation(oplog.Ns, data)
+					err = processDeleteOperation(oplog.Ns, data, statementChannel)
 				default:
 					return
 				}
@@ -80,11 +89,17 @@ func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 					fmt.Printf("Error processing operation: %s", err)
 					return
 				}
-				writer.WriterStreamFile(outputFile, statement)
 			}(oplog)
 		}
 	}
 
-	wg.Wait()
+	// Wait for all goroutines to finish
+	go func() {
+		wg.Wait()
+		close(statementChannel) // Close the statement channel when all tasks are done
+	}()
+
+	// Wait for the statement channel to be closed
+	<-done
 	return nil
 }
