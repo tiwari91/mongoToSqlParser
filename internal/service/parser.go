@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+
+	"github.com/tiwari91/mongoparser/internal/writer"
 )
 
 type Oplog struct {
@@ -17,30 +19,24 @@ type Oplog struct {
 	} `json:"o2"`
 }
 
-func ProcessLogFile(db *sql.DB, filename string) error {
+func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 	var oplogs []Oplog
 
-	// Initialize existingSchemas map
 	existingSchemas := make(map[string]bool)
 	createdTables := make(map[string][]string)
 
-	file, err := os.Open(filename)
+	file, err := os.Open(inputFilename)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	outputFile, err := os.Create("db/result.sql")
+	outputFile, err := os.Create(outputFilename)
 	if err != nil {
 		return err
 	}
 	defer outputFile.Close()
 
-	// Create a buffered writer to efficiently write to the output file
-	writer := bufio.NewWriter(outputFile)
-	defer writer.Flush()
-
-	// Create JSON decoder
 	decoder := json.NewDecoder(bufio.NewReader(file))
 
 	var statement string
@@ -49,12 +45,10 @@ func ProcessLogFile(db *sql.DB, filename string) error {
 	for decoder.More() {
 
 		if err := decoder.Decode(&oplogs); err != nil {
-			// Handle JSON decoding error
 			fmt.Printf("Error decoding JSON: %s\n", err)
 			break
 		}
 
-		// Print the content of each oplog
 		for _, oplog := range oplogs {
 
 			var data map[string]interface{}
@@ -67,19 +61,27 @@ func ProcessLogFile(db *sql.DB, filename string) error {
 			switch oplog.Op {
 			case "i":
 				statement, err = processInsertOperation(oplog.Ns, data, existingSchemas, createdTables)
+				if err != nil {
+					fmt.Printf("Error processing insert JSON: %s", err)
+					continue
+				}
 			case "u":
 				statement, err = processUpdateOperation(oplog.Ns, oplog.O2.ID, data)
+				if err != nil {
+					fmt.Printf("Error processing update JSON: %s", err)
+					continue
+				}
 			case "d":
 				statement, err = processDeleteOperation(oplog.Ns, data)
+				if err != nil {
+					fmt.Printf("Error processing delete JSON: %s", err)
+					continue
+				}
 			default:
 				continue
 			}
 
-			// Write the statement to the output file
-			_, err := writer.WriteString(statement + "\n")
-			if err != nil {
-				return err
-			}
+			writer.WriterStreamFile(outputFile, statement)
 		}
 
 	}

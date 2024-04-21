@@ -20,9 +20,10 @@ func main() {
 	}
 	defer db.Close()
 
-	filename := "db/input.json"
+	inputFilename := "db/input.json"
+	outputFilename := "db/result.sql"
 
-	service.ProcessLogFile(db, filename)
+	service.ProcessLogFile(db, inputFilename, outputFilename)
 
 	endTime := time.Since(start)
 
