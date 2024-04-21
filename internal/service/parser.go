@@ -25,11 +25,11 @@ func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 	existingSchemas := make(map[string]bool)
 	createdTables := make(map[string][]string)
 
-	file, err := os.Open(inputFilename)
+	inputFile, err := os.Open(inputFilename)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer inputFile.Close()
 
 	outputFile, err := os.Create(outputFilename)
 	if err != nil {
@@ -37,11 +37,10 @@ func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 	}
 	defer outputFile.Close()
 
-	decoder := json.NewDecoder(bufio.NewReader(file))
+	decoder := json.NewDecoder(bufio.NewReader(inputFile))
 
 	var statement string
 
-	// Read and process each JSON object in the file
 	for decoder.More() {
 
 		if err := decoder.Decode(&oplogs); err != nil {
