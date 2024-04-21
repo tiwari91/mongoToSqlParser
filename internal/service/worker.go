@@ -46,11 +46,11 @@ func worker(db *sql.DB, wg *sync.WaitGroup, oplogs []Oplog, resultChannel chan<-
 
 		switch oplog.Op {
 		case "i":
-			err = domain.ProcessInsert(oplog.Ns, data, existingSchemas, createdTables, resultChannel)
+			err = domain.ProcessInsertOpertion(oplog.Ns, data, existingSchemas, createdTables, resultChannel)
 		case "u":
-			err = domain.ConvertToSQLUpdate(oplog.Ns, oplog.O2.ID, data, resultChannel)
+			err = domain.ProcessUpdateOperation(oplog.Ns, oplog.O2.ID, data, resultChannel)
 		case "d":
-			err = domain.ConvertToSQLDelete(oplog.Ns, data, resultChannel)
+			err = domain.ProcessDeleteOperation(oplog.Ns, data, resultChannel)
 		default:
 			continue
 		}

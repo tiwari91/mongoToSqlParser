@@ -7,9 +7,8 @@ import (
 	"github.com/tiwari91/mongoparser/internal/utils"
 )
 
-func ProcessInsert(namespace string, data map[string]interface{},
-	existingSchemas map[string]bool, createdTables map[string][]string,
-	output chan<- string) error {
+func ProcessInsertOpertion(namespace string, data map[string]interface{}, existingSchemas map[string]bool,
+	createdTables map[string][]string, output chan<- string) error {
 
 	var nonNestedData = make(map[string]interface{})
 	var nestedData = make(map[string]interface{})
@@ -105,6 +104,50 @@ func ProcessInsert(namespace string, data map[string]interface{},
 			return fmt.Errorf("unsupported data type for nested column %s", key)
 		}
 	}
+
+	return nil
+}
+
+func ProcessUpdateOperation(namespace string, ID string, data map[string]interface{}, resultChannel chan<- string) error {
+	var updateFields []string
+
+	for _, value := range data {
+		switch diff := value.(type) {
+		case map[string]interface{}:
+			for opType, fields := range diff {
+				for field, newValue := range fields.(map[string]interface{}) {
+					if opType == "d" {
+						updateFields = append(updateFields, fmt.Sprintf("%s = NULL", field))
+					} else {
+						updateFields = append(updateFields, fmt.Sprintf("%s = %v", field, newValue))
+					}
+				}
+			}
+		}
+	}
+
+	condition := fmt.Sprintf("_id = '%s'", ID)
+	updateStr := strings.Join(updateFields, ", ")
+	sqlStatement := fmt.Sprintf("UPDATE %s SET %s WHERE %s;", namespace, updateStr, condition)
+
+	resultChannel <- sqlStatement
+
+	return nil
+}
+
+func ProcessDeleteOperation(namespace string, data map[string]interface{}, resultChannel chan<- string) error {
+
+	var condition string
+
+	for key, value := range data {
+		if key == "_id" {
+			condition = fmt.Sprintf("%s = '%v'", key, value)
+			break
+		}
+	}
+
+	sqlStatement := fmt.Sprintf("DELETE FROM %s WHERE %s;", namespace, condition)
+	resultChannel <- sqlStatement
 
 	return nil
 }
