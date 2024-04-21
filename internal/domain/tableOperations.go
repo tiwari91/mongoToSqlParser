@@ -7,7 +7,7 @@ import (
 	"github.com/tiwari91/mongoparser/internal/utils"
 )
 
-func createTable(namespace, columnName string, data map[string]interface{}, createdTables *map[string][]string, output chan<- string) {
+func CreateTable(namespace, columnName string, data map[string]interface{}, createdTables *map[string][]string, output chan<- string) {
 	tableName := fmt.Sprintf("%s.%s_%s", strings.Split(namespace, ".")[0], strings.Split(namespace, ".")[1], columnName)
 	if len((*createdTables)[tableName]) == 0 {
 		var columnDefs []string
@@ -41,7 +41,7 @@ func createTable(namespace, columnName string, data map[string]interface{}, crea
 	}
 }
 
-func insertTable(namespace, columnName string, data map[string]interface{}, studentID string, output chan<- string, createdTables map[string][]string) {
+func InsertTable(namespace, columnName string, data map[string]interface{}, studentID string, output chan<- string, createdTables map[string][]string) {
 	tableName := fmt.Sprintf("%s_%s", namespace, columnName)
 
 	if columns, ok := createdTables[tableName]; ok {
@@ -63,7 +63,7 @@ func insertTable(namespace, columnName string, data map[string]interface{}, stud
 	}
 }
 
-func alterTable(columnNames []string, createdTables map[string][]string, namespace string, output chan<- string) {
+func AlterTable(columnNames []string, createdTables map[string][]string, namespace string, output chan<- string) {
 	for _, columnName := range columnNames {
 		if !utils.Contains(createdTables[namespace], columnName) {
 			alterTableSQL := fmt.Sprintf("ALTER TABLE %s ADD %s VARCHAR(255);", namespace, columnName)
