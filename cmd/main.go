@@ -6,12 +6,29 @@ import (
 	"os"
 	"time"
 
+	_ "github.com/lib/pq"
+	"github.com/tiwari91/mongoparser/db"
 	"github.com/tiwari91/mongoparser/internal/service"
+)
+
+const (
+	host     = "localhost"
+	port     = 5432
+	user     = "bookmarks"
+	password = "pa55word"
+	dbname   = "bookmarks"
 )
 
 func main() {
 
 	start := time.Now()
+
+	db, err := db.ConnectDB()
+	if err != nil {
+		fmt.Println("Error connecting to the database:", err)
+		return
+	}
+	defer db.Close()
 
 	inputFilename := flag.String("input", "", "Input filename containing oplogs")
 	outputFilename := flag.String("output", "", "Output filename to write SQL statements")
@@ -33,7 +50,7 @@ func main() {
 
 	//fmt.Println("oplogJSON", oplogJSON)
 
-	service.ProcessLogFile(oplogJSON, *outputFilename)
+	service.ProcessLogFile(db, oplogJSON, *outputFilename)
 
 	endTime := time.Since(start)
 

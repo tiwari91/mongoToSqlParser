@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"encoding/json"
 	"sync"
 
@@ -16,7 +17,7 @@ type Oplog struct {
 	} `json:"o2"`
 }
 
-func ProcessLogFile(oplogJSON, outputFilename string) error {
+func ProcessLogFile(db *sql.DB, oplogJSON, outputFilename string) error {
 	var oplogs []Oplog
 	err := json.Unmarshal([]byte(oplogJSON), &oplogs)
 	if err != nil {
@@ -38,7 +39,7 @@ func ProcessLogFile(oplogJSON, outputFilename string) error {
 
 	for i := 0; i < 20; i++ {
 		wg.Add(1)
-		go worker(&wg, oplogs, resultChannel, existingSchemas, createdTables, processedOplogs, &processedOplogsMu)
+		go worker(db, &wg, oplogs, resultChannel, existingSchemas, createdTables, processedOplogs, &processedOplogsMu)
 	}
 
 	go func() {

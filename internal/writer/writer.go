@@ -1,6 +1,8 @@
 package writer
 
-import "os"
+import (
+	"os"
+)
 
 func WriterFile(outputFilename string, resultChannel chan string) error {
 	file, err := os.OpenFile(outputFilename, os.O_APPEND|os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
