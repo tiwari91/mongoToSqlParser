@@ -28,8 +28,9 @@ func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 		wg                sync.WaitGroup
 		existingSchemas   = make(map[string]bool)
 		createdTables     = make(map[string][]string)
-		done              = make(chan struct{})
-		statementChannel  = make(chan string, 100)
+		// Channel to signal when all goroutines are done
+		done             = make(chan struct{})
+		statementChannel = make(chan string, 100)
 	)
 
 	inputFile, err := os.Open(inputFilename)
@@ -46,10 +47,12 @@ func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 
 	decoder := json.NewDecoder(bufio.NewReader(inputFile))
 
+	// Goroutine to process statements from the channel
 	go func() {
 		for statement := range statementChannel {
 			writer.WriterStreamFile(outputFile, statement)
 		}
+		// Signal that all statements are processed
 		close(done)
 	}()
 
@@ -96,7 +99,8 @@ func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 	// Wait for all goroutines to finish
 	go func() {
 		wg.Wait()
-		close(statementChannel) // Close the statement channel when all tasks are done
+		// Close the statement channel when all tasks are done
+		close(statementChannel)
 	}()
 
 	// Wait for the statement channel to be closed
