@@ -19,6 +19,7 @@ func worker(db *sql.DB, wg *sync.WaitGroup, oplogs []Oplog, resultChannel chan<-
 	defer processedOplogsMu.Unlock()
 
 	for index, oplog := range oplogs {
+
 		exists, err := domain.PositionExists(db, index)
 		if err != nil {
 			resultChannel <- fmt.Sprintf("Error checking position existence: %v", err)
@@ -58,5 +59,6 @@ func worker(db *sql.DB, wg *sync.WaitGroup, oplogs []Oplog, resultChannel chan<-
 			resultChannel <- fmt.Sprintf("Error: %s", err)
 			continue
 		}
+
 	}
 }
