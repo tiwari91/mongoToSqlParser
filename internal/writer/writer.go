@@ -4,8 +4,8 @@ import (
 	"os"
 )
 
-func WriterFile(outputFilename string, resultChannel chan string) error {
-	file, err := os.OpenFile(outputFilename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+func WriterFile(resultChannel chan string) error {
+	file, err := os.OpenFile("db/result.sql", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}

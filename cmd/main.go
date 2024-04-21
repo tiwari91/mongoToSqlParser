@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"time"
@@ -9,14 +8,6 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/tiwari91/mongoparser/db"
 	"github.com/tiwari91/mongoparser/internal/service"
-)
-
-const (
-	host     = "localhost"
-	port     = 5432
-	user     = "bookmarks"
-	password = "pa55word"
-	dbname   = "bookmarks"
 )
 
 func main() {
@@ -30,17 +21,7 @@ func main() {
 	}
 	defer db.Close()
 
-	inputFilename := flag.String("input", "", "Input filename containing oplogs")
-	outputFilename := flag.String("output", "", "Output filename to write SQL statements")
-	flag.Parse()
-
-	// Check if input filename is provided
-	if *inputFilename == "" {
-		fmt.Println("Error: Input filename not provided")
-		return
-	}
-
-	oplogBytes, err := os.ReadFile(*inputFilename)
+	oplogBytes, err := os.ReadFile("db/input.json")
 	if err != nil {
 		fmt.Println("Error reading oplog file:", err)
 		return
@@ -50,7 +31,7 @@ func main() {
 
 	//fmt.Println("oplogJSON", oplogJSON)
 
-	service.ProcessLogFile(db, oplogJSON, *outputFilename)
+	service.ProcessLogFile(db, oplogJSON)
 
 	endTime := time.Since(start)
 

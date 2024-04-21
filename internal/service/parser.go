@@ -17,7 +17,7 @@ type Oplog struct {
 	} `json:"o2"`
 }
 
-func ProcessLogFile(db *sql.DB, oplogJSON, outputFilename string) error {
+func ProcessLogFile(db *sql.DB, oplogJSON string) error {
 	var oplogs []Oplog
 	err := json.Unmarshal([]byte(oplogJSON), &oplogs)
 	if err != nil {
@@ -47,7 +47,7 @@ func ProcessLogFile(db *sql.DB, oplogJSON, outputFilename string) error {
 		close(resultChannel)
 	}()
 
-	writer.WriterFile(outputFilename, resultChannel)
+	writer.WriterFile(resultChannel)
 
 	return nil
 }
