@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/tiwari91/mongoparser/internal/domain"
 	"github.com/tiwari91/mongoparser/internal/writer"
 )
 
@@ -31,7 +32,9 @@ func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 	}
 	defer inputFile.Close()
 
-	outputFile, err := os.Create(outputFilename)
+	//outputFile, err := os.Create(outputFilename)
+	outputFile, err := os.OpenFile(outputFilename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+
 	if err != nil {
 		return err
 	}
@@ -48,12 +51,27 @@ func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 			break
 		}
 
-		for _, oplog := range oplogs {
+		for index, oplog := range oplogs {
 
 			var data map[string]interface{}
 			err = json.Unmarshal(oplog.O, &data)
 			if err != nil {
-				fmt.Printf("Error unmarshaling JSON: %s", err)
+				fmt.Println("Error unmarshaling JSON")
+				continue
+			}
+
+			exists, err := domain.PositionExists(db, index)
+			if err != nil {
+				fmt.Println("Error checking position existence")
+				continue
+			}
+			if exists {
+				continue
+			}
+
+			err = domain.SavePosition(db, index)
+			if err != nil {
+				fmt.Println("Error saving position")
 				continue
 			}
 
@@ -61,7 +79,7 @@ func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 			case "i":
 				statement, err = processInsertOperation(oplog.Ns, data, existingSchemas, createdTables)
 				if err != nil {
-					fmt.Printf("Error processing insert JSON: %s", err)
+					fmt.Println("Error processing insert JSON")
 					continue
 				}
 			case "u":
