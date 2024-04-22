@@ -52,7 +52,9 @@ func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 		for statement := range statementChannel {
 			writer.WriterStreamFile(outputFile, statement)
 		}
-		// Signal that all statements are processed
+
+		fmt.Printf("\nParsing completed successfully!, press ctrl+c to terminate the program and open result.sql to view the content\n")
+
 		close(done)
 	}()
 
