@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -21,17 +20,10 @@ func main() {
 	}
 	defer db.Close()
 
-	oplogBytes, err := os.ReadFile("db/input.json")
-	if err != nil {
-		fmt.Println("Error reading oplog file:", err)
-		return
-	}
+	inputFilename := "db/input.json"
+	outputFilename := "db/result.sql"
 
-	oplogJSON := string(oplogBytes)
-
-	//fmt.Println("oplogJSON", oplogJSON)
-
-	service.ProcessLogFile(db, oplogJSON)
+	service.ProcessLogFile(db, inputFilename, outputFilename)
 
 	endTime := time.Since(start)
 

@@ -8,15 +8,21 @@ import (
 	"github.com/tiwari91/mongoparser/internal/utils"
 )
 
-func ProcessInsertOpertion(namespace string, data map[string]interface{}, existingSchemas map[string]bool,
-	createdTables map[string][]string, output chan<- string) error {
+func processInsertOperation(namespace string, data map[string]interface{},
+	existingSchemas map[string]bool,
+	createdTables map[string][]string,
+	statementChannel chan string) error {
+
+	//var sqlStatements []string
 
 	var nonNestedData = make(map[string]interface{})
 	var nestedData = make(map[string]interface{})
 
 	createSchemaSQL := fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", strings.Split(namespace, ".")[0])
 	if _, ok := existingSchemas[strings.Split(namespace, ".")[0]]; !ok {
-		output <- createSchemaSQL
+		//output <- createSchemaSQL
+		//sqlStatements = append(sqlStatements, createSchemaSQL)
+		statementChannel <- createSchemaSQL
 		existingSchemas[strings.Split(namespace, ".")[0]] = true
 	}
 
@@ -58,17 +64,19 @@ func ProcessInsertOpertion(namespace string, data map[string]interface{}, existi
 	// Check if the table already exists
 	if utils.TableExists(namespace, createdTables) {
 		// If the table exists and columns are not the same then perform alterations
-		domain.AlterTable(columnNames, createdTables, namespace, output)
+		domain.AlterTable(columnNames, createdTables, namespace, statementChannel)
 
 	} else {
 		// If the table does not exist, create it
 		createTableSQL := fmt.Sprintf("CREATE TABLE %s IF NOT EXISTS (%s);", namespace, columnDefsStr)
-		output <- createTableSQL
+		//sqlStatements = append(sqlStatements, createTableSQL)
+		statementChannel <- createTableSQL
 		createdTables[namespace] = append(createdTables[namespace], columnNames...)
 	}
 
 	insertSQL := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s);", namespace, strings.Join(columnNames, ", "), valuesStr)
-	output <- insertSQL
+	//sqlStatements = append(sqlStatements, insertSQL)
+	statementChannel <- insertSQL
 
 	// Process nested data
 	for key, value := range nestedData {
@@ -82,7 +90,7 @@ func ProcessInsertOpertion(namespace string, data map[string]interface{}, existi
 				}
 
 				// Create a table for the array if not already created
-				domain.CreateTable(namespace, key, itemMap, &createdTables, output)
+				domain.CreateTable(namespace, key, itemMap, &createdTables, statementChannel)
 
 				studentID := utils.GetStudentId(data)
 				if studentID == "" {
@@ -90,17 +98,18 @@ func ProcessInsertOpertion(namespace string, data map[string]interface{}, existi
 				}
 
 				// Insert records into the array table
-				domain.InsertTable(namespace, key, itemMap, studentID, output, createdTables)
+				domain.InsertTable(namespace, key, itemMap, studentID, createdTables, statementChannel)
 			}
 		case map[string]interface{}:
 			// Handle nested objects
-			domain.CreateTable(namespace, key, v, &createdTables, output)
+			domain.CreateTable(namespace, key, v, &createdTables, statementChannel)
 
 			studentID := utils.GetStudentId(data)
 			if studentID == "" {
 				return fmt.Errorf("student ID not found in oplog data")
 			}
-			domain.InsertTable(namespace, key, v, studentID, output, createdTables)
+			//domain.InsertTable(namespace, key, v, studentID, createdTables, &sqlStatements)
+			domain.InsertTable(namespace, key, v, studentID, createdTables, statementChannel)
 		default:
 			return fmt.Errorf("unsupported data type for nested column %s", key)
 		}
@@ -109,7 +118,8 @@ func ProcessInsertOpertion(namespace string, data map[string]interface{}, existi
 	return nil
 }
 
-func ProcessUpdateOperation(namespace string, ID string, data map[string]interface{}, resultChannel chan<- string) error {
+func processUpdateOperation(namespace string, ID string, data map[string]interface{},
+	statementChannel chan string) error {
 	var updateFields []string
 
 	for _, value := range data {
@@ -131,12 +141,13 @@ func ProcessUpdateOperation(namespace string, ID string, data map[string]interfa
 	updateStr := strings.Join(updateFields, ", ")
 	sqlStatement := fmt.Sprintf("UPDATE %s SET %s WHERE %s;", namespace, updateStr, condition)
 
-	resultChannel <- sqlStatement
+	statementChannel <- sqlStatement
+	//result = append(result, sqlStatement)
 
 	return nil
 }
 
-func ProcessDeleteOperation(namespace string, data map[string]interface{}, resultChannel chan<- string) error {
+func processDeleteOperation(namespace string, data map[string]interface{}, statementChannel chan string) error {
 
 	var condition string
 
@@ -148,7 +159,7 @@ func ProcessDeleteOperation(namespace string, data map[string]interface{}, resul
 	}
 
 	sqlStatement := fmt.Sprintf("DELETE FROM %s WHERE %s;", namespace, condition)
-	resultChannel <- sqlStatement
+	statementChannel <- sqlStatement
 
 	return nil
 }

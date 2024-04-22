@@ -1,8 +1,11 @@
 package service
 
 import (
+	"bufio"
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"os"
 	"sync"
 
 	"github.com/tiwari91/mongoparser/internal/writer"
@@ -17,37 +20,90 @@ type Oplog struct {
 	} `json:"o2"`
 }
 
-func ProcessLogFile(db *sql.DB, oplogJSON string) error {
+func ProcessLogFile(db *sql.DB, inputFilename, outputFilename string) error {
 	var oplogs []Oplog
-	err := json.Unmarshal([]byte(oplogJSON), &oplogs)
+
+	var (
+		processedOplogsMu sync.Mutex
+		wg                sync.WaitGroup
+		existingSchemas   = make(map[string]bool)
+		createdTables     = make(map[string][]string)
+		// Channel to signal when all goroutines are done
+		done             = make(chan struct{})
+		statementChannel = make(chan string, 100)
+	)
+
+	inputFile, err := os.Open(inputFilename)
 	if err != nil {
 		return err
 	}
+	defer inputFile.Close()
 
-	// Initialize existingSchemas map
-	existingSchemas := make(map[string]bool)
-	createdTables := make(map[string][]string)
-
-	var wg sync.WaitGroup
-	resultChannel := make(chan string, len(oplogs))
-
-	// Start worker pool
-	//fmt.Println("len(oplogs)", len(oplogs))
-
-	processedOplogs := make(map[string]bool)
-	var processedOplogsMu sync.Mutex
-
-	for i := 0; i < 20; i++ {
-		wg.Add(1)
-		go worker(db, &wg, oplogs, resultChannel, existingSchemas, createdTables, processedOplogs, &processedOplogsMu)
+	outputFile, err := os.Create(outputFilename)
+	if err != nil {
+		return err
 	}
+	defer outputFile.Close()
 
+	decoder := json.NewDecoder(bufio.NewReader(inputFile))
+
+	// Goroutine to process statements from the channel
 	go func() {
-		wg.Wait()
-		close(resultChannel)
+		for statement := range statementChannel {
+			writer.WriterStreamFile(outputFile, statement)
+		}
+		// Signal that all statements are processed
+		close(done)
 	}()
 
-	writer.WriterFile(resultChannel)
+	for decoder.More() {
+		if err := decoder.Decode(&oplogs); err != nil {
+			fmt.Printf("Error decoding JSON: %s\n", err)
+			break
+		}
 
+		for _, oplog := range oplogs {
+			wg.Add(1)
+			go func(oplog Oplog) {
+				defer wg.Done()
+
+				var data map[string]interface{}
+
+				processedOplogsMu.Lock()
+				defer processedOplogsMu.Unlock()
+
+				err = json.Unmarshal(oplog.O, &data)
+				if err != nil {
+					fmt.Printf("Error unmarshaling JSON: %s", err)
+					return
+				}
+
+				switch oplog.Op {
+				case "i":
+					err = processInsertOperation(oplog.Ns, data, existingSchemas, createdTables, statementChannel)
+				case "u":
+					err = processUpdateOperation(oplog.Ns, oplog.O2.ID, data, statementChannel)
+				case "d":
+					err = processDeleteOperation(oplog.Ns, data, statementChannel)
+				default:
+					return
+				}
+				if err != nil {
+					fmt.Printf("Error processing operation: %s", err)
+					return
+				}
+			}(oplog)
+		}
+	}
+
+	// Wait for all goroutines to finish
+	go func() {
+		wg.Wait()
+		// Close the statement channel when all tasks are done
+		close(statementChannel)
+	}()
+
+	// Wait for the statement channel to be closed
+	<-done
 	return nil
 }

@@ -1,64 +1,69 @@
 package service
 
-import (
-	"database/sql"
-	"encoding/json"
-	"fmt"
-	"strconv"
-	"sync"
+// import (
+// 	"database/sql"
+// 	"encoding/json"
+// 	"fmt"
+// 	"sync"
 
-	"github.com/tiwari91/mongoparser/internal/domain"
-)
+// 	"github.com/tiwari91/mongoparser/internal/domain"
+// )
 
-func worker(db *sql.DB, wg *sync.WaitGroup, oplogs []Oplog, resultChannel chan<- string, existingSchemas map[string]bool,
-	createdTables map[string][]string, processedOplogs map[string]bool, processedOplogsMu *sync.Mutex) {
+// func worker(db *sql.DB, wg *sync.WaitGroup,
+// 	inputChannel <-chan Oplog,
+// 	outputChannel chan<- string,
+// 	existingSchemas map[string]bool,
+// 	createdTables map[string][]string) {
 
-	defer wg.Done()
+// 	defer wg.Done()
 
-	processedOplogsMu.Lock()
-	defer processedOplogsMu.Unlock()
+// 	index := 0
+// 	for oplog := range inputChannel {
+// 		// index := oplog.Index
 
-	for index, oplog := range oplogs {
+// 		exists, err := domain.PositionExists(db, index)
+// 		if err != nil {
+// 			outputChannel <- fmt.Sprintf("Error checking position existence: %v", err)
+// 			continue
+// 		}
+// 		if exists {
+// 			continue
+// 		}
 
-		exists, err := domain.PositionExists(db, index)
-		if err != nil {
-			resultChannel <- fmt.Sprintf("Error checking position existence: %v", err)
-			continue
-		}
-		if exists {
-			continue
-		}
+// 		err = domain.SavePosition(db, index)
+// 		if err != nil {
+// 			outputChannel <- fmt.Sprintf("Error saving position: %v", err)
+// 			continue
+// 		}
 
-		err = domain.SavePosition(db, index)
-		if err != nil {
-			resultChannel <- fmt.Sprintf("Error saving position: %v", err)
-			continue
-		}
+// 		// processedOplogsMu.Lock()
+// 		//processedOplogs[strconv.Itoa(index)] = true
+// 		// processedOplogsMu.Unlock()
 
-		processedOplogs[strconv.Itoa(index)] = true
+// 		var data map[string]interface{}
+// 		err = json.Unmarshal(oplog.O, &data)
+// 		if err != nil {
+// 			outputChannel <- fmt.Sprintf("Error unmarshaling JSON: %s", err)
+// 			continue
+// 		}
 
-		var data map[string]interface{}
-		err = json.Unmarshal(oplog.O, &data)
-		if err != nil {
-			resultChannel <- fmt.Sprintf("Error unmarshaling JSON: %s", err)
-			continue
-		}
+// 		switch oplog.Op {
+// 		case "i":
+// 			err = processInsertOperation(oplog.Ns, data, existingSchemas, createdTables, outputChannel)
+// 		case "u":
+// 			err = processUpdateOperation(oplog.Ns, oplog.O2.ID, data, outputChannel)
+// 		case "d":
+// 			err = processDeleteOperation(oplog.Ns, data, outputChannel)
+// 		default:
+// 			continue
+// 		}
 
-		switch oplog.Op {
-		case "i":
-			err = ProcessInsertOpertion(oplog.Ns, data, existingSchemas, createdTables, resultChannel)
-		case "u":
-			err = ProcessUpdateOperation(oplog.Ns, oplog.O2.ID, data, resultChannel)
-		case "d":
-			err = ProcessDeleteOperation(oplog.Ns, data, resultChannel)
-		default:
-			continue
-		}
+// 		if err != nil {
+// 			outputChannel <- fmt.Sprintf("Error: %s", err)
+// 			continue
+// 		}
 
-		if err != nil {
-			resultChannel <- fmt.Sprintf("Error: %s", err)
-			continue
-		}
+// 		index++
 
-	}
-}
+// 	}
+// }
